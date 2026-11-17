@@ -1,0 +1,10 @@
+[project]
+name = "room-chat-ai-backend"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = ["fastapi", "uvicorn[standard]", "pydantic-settings"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
