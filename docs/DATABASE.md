@@ -2,7 +2,92 @@
 
 ## Status
 
-No database exists yet. Day 1 intentionally contains no models, migrations or PostgreSQL setup. This is the approved target schema direction.
+Day 2 adds the database foundation: async SQLAlchemy 2 engine, session dependency, declarative Base, model registration package, Alembic, and a pgvector extension migration. No business models, authentication, or AI tables exist yet. The entity sections below are the approved target schema direction.
+
+## Day 2 Foundation
+
+Implemented:
+- Async SQLAlchemy 2 engine using `asyncpg`.
+- Async session factory and FastAPI `get_db_session` dependency.
+- Declarative `Base` in `backend/app/db/base.py`.
+- Central model registration through `backend/app/models/__init__.py`.
+- Alembic async configuration in `backend/alembic/env.py`.
+- Initial migration enabling the `vector` extension.
+- Liveness `/health` and `/api/v1/health`; database readiness `/api/v1/health/db`.
+
+Not implemented:
+- Any business model or table.
+- Authentication tables.
+- Embedding tables or RAG.
+
+## Environment
+
+Required backend variables:
+- `DATABASE_URL` must use `postgresql+asyncpg://`.
+- `DB_POOL_SIZE` default 5.
+- `DB_MAX_OVERFLOW` default 10.
+- `DB_POOL_TIMEOUT` default 30.
+- `DB_CONNECT_TIMEOUT` default 5.
+- `DB_ECHO` default false.
+- `TEST_DATABASE_URL` for integration tests.
+
+Copy `backend/.env.example` to `backend/.env` and replace the password. Never commit `.env`.
+
+## PostgreSQL Setup
+
+With a local PostgreSQL 18 installation:
+1. Create a role and databases.
+2. Grant ownership.
+3. Install pgvector for PostgreSQL 18.
+4. Set `DATABASE_URL`.
+5. Run `alembic upgrade head` from `backend`.
+
+```sql
+CREATE ROLE room_chat LOGIN PASSWORD 'replace-me';
+CREATE DATABASE room_chat_ai OWNER room_chat;
+CREATE DATABASE room_chat_ai_test OWNER room_chat;
+```
+
+## pgvector
+
+The initial migration checks `pg_available_extensions` for `vector`. If the server extension is missing, it raises a clear error instead of silently skipping.
+
+Setup options:
+- Docker: use the `pgvector/pgvector:pg18` image.
+- Linux package: install the pgvector package matching PostgreSQL 18.
+- Windows: install pgvector binaries for PostgreSQL 18 into the server's `lib` and `share/extension` directories.
+
+Verify:
+
+```sql
+SELECT * FROM pg_available_extensions WHERE name = 'vector';
+```
+
+## Migrations
+
+From `backend/`:
+
+```powershell
+.venv\Scripts\activate
+alembic upgrade head
+alembic current
+alembic revision --autogenerate -m "describe change"
+alembic downgrade -1
+```
+
+Alembic reads `DATABASE_URL` from the same Pydantic Settings used by the app. No credentials are stored in `alembic.ini`.
+
+## Database Tests
+
+From `backend/` with a real PostgreSQL test database:
+
+```powershell
+$env:TEST_DATABASE_URL="postgresql+asyncpg://room_chat:replace-me@localhost:5432/room_chat_ai_test"
+$env:DATABASE_URL=$env:TEST_DATABASE_URL
+.venv\Scripts\python.exe -m pytest
+```
+
+Tests that require PostgreSQL skip when `TEST_DATABASE_URL` is unset. pgvector checks skip when the server extension is unavailable. SQLite is not used as a substitute.
 
 ## Conventions
 

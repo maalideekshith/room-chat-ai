@@ -2,11 +2,24 @@
 
 ## Status
 
-Day 1 implemented scaffolding and health endpoints only. Everything below is target architecture unless marked implemented.
+Day 1 implemented scaffolding and health endpoints. Day 2 added the async database foundation. Business features below remain target architecture.
 
 ## Style
 
 Modular monolith. One FastAPI deployable and one React SPA. One PostgreSQL database with pgvector. Redis, WebSockets, Celery and MCP are planned additions.
+
+## Database Infrastructure
+
+Implemented in Day 2:
+- Async SQLAlchemy 2 engine with `asyncpg` and connection pooling.
+- Single Pydantic Settings source for environment configuration.
+- `Base` and centralized model registration package for future models.
+- FastAPI session dependency with rollback and cleanup.
+- Alembic async migrations driven by the same settings.
+- Separate liveness and database readiness endpoints.
+- pgvector extension migration that fails clearly when the server extension is absent.
+
+Connection failures are handled at the readiness boundary and return no credentials or SQL details.
 
 ## Responsibilities
 

@@ -14,9 +14,37 @@
 - Frontend production build passing.
 - Python 3.13 virtual environment installed with FastAPI, Uvicorn, Pydantic Settings, pytest and httpx.
 
-Verified:
-- Backend tests: 2 passed.
-- Frontend build: passed.
+### Day 2
+
+Database foundation:
+- PostgreSQL 18.7 running through Docker.
+- pgvector 0.8.7 installed.
+- Alembic revision `20261118_0001` successfully applied to the main database and test database.
+
+Backend:
+- SQLAlchemy 2 async engine and session management with pooling, pre-ping and timeouts.
+- FastAPI database dependency with rollback and cleanup.
+- Database readiness endpoint `/api/v1/health/db`; liveness endpoints unchanged.
+- Centralized database configuration through Pydantic Settings.
+- Declarative Base and centralized model registration package.
+- Alembic async migration configuration using the same settings and metadata.
+- Initial pgvector extension migration with a clear failure when unavailable.
+
+Testing:
+- Test database isolation implemented; tests use `TEST_DATABASE_URL` and cannot fall back to the development database.
+- Development database protection verified.
+- 18 passed, 1 non-blocking deprecation warning with `TEST_DATABASE_URL` configured.
+- 11 passed, 7 skipped without `TEST_DATABASE_URL`.
+- `alembic current`: `20261118_0001 (head)`.
+- `alembic check`: No new upgrade operations detected.
+- Future write tests should add transaction rollback fixtures for per-test cleanup.
+
+### Verification Snapshot
+
+- PostgreSQL 18.7 via Docker; pgvector 0.8.7.
+- Main and test databases at revision `20261118_0001`.
+- Backend: 18 passed with test database configured; 11 passed, 7 skipped without it.
+- Frontend production build: passed separately.
 
 ### Architecture decisions (documentation only)
 
@@ -34,7 +62,7 @@ Verified:
 ## Not Implemented
 
 - Authentication and sessions.
-- Database models, PostgreSQL and pgvector.
+- Business database models and tables.
 - Solo workspace features.
 - Team rooms, memberships, invitations, roles.
 - Notifications and email delivery.
@@ -46,14 +74,19 @@ Verified:
 - Billing and subscriptions.
 - Docker deployment.
 
+## Manual Setup Required
+
+- Keep the Docker PostgreSQL container running for database integration tests.
+- Set `DATABASE_URL` and `TEST_DATABASE_URL` in `backend/.env` for local development and testing.
+- No Day 2 migration work remains; revision `20261118_0001` is applied to both databases.
+
 ## Next
 
-### Day 2
+### Day 3
 
-- Database foundation with PostgreSQL and pgvector.
-- Alembic baseline.
-- Initial schema and migration structure.
+- User identity and Argon2 password hashing.
+- JWT access tokens and refresh session records.
 
 ## Notes
 
-Documentation describes target behavior. Only the Day 1 items above are implemented.
+Documentation describes target behavior. Only the completed items above are implemented.
