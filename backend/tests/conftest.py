@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
-import app.db.session as db_session
+import app.db.session as database_session_module
 from app.core.config import settings
 from app.db.session import get_db_session
 from app.main import app
@@ -71,12 +71,42 @@ async def test_session_factory(
     )
 
 
+
+@pytest_asyncio.fixture
+async def db_session(test_engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
+    connection = await test_engine.connect()
+    transaction = await connection.begin()
+    session = AsyncSession(
+        bind=connection,
+        expire_on_commit=False,
+        autoflush=False,
+        join_transaction_mode="create_savepoint",
+    )
+    try:
+        yield session
+    finally:
+        await session.close()
+        if transaction.is_active:
+            await transaction.rollback()
+        await connection.close()
+
+
+@pytest.fixture
+def test_app_db_session(db_session: AsyncSession):
+    async def override_get_db_session() -> AsyncIterator[AsyncSession]:
+        yield db_session
+
+    app.dependency_overrides[get_db_session] = override_get_db_session
+    try:
+        yield db_session
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
 @pytest.fixture
 def test_app_database(
     monkeypatch: pytest.MonkeyPatch,
     test_session_factory: async_sessionmaker[AsyncSession],
 ) -> async_sessionmaker[AsyncSession]:
-    monkeypatch.setattr(db_session, "async_session_factory", test_session_factory)
+    monkeypatch.setattr(database_session_module, "async_session_factory", test_session_factory)
     return test_session_factory
 
 
@@ -95,7 +125,7 @@ def guard_application_database(
             "TEST_DATABASE_URL."
         )
 
-    monkeypatch.setattr(db_session, "async_session_factory", blocked_session_factory)
+    monkeypatch.setattr(database_session_module, "async_session_factory", blocked_session_factory)
 
 
 @pytest.fixture

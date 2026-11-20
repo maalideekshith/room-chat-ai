@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented: `GET /health`, `GET /api/v1/health`, and database readiness `GET /api/v1/health/db`. All other endpoints are planned.
+Implemented: `GET /health`, `GET /api/v1/health`, database readiness `GET /api/v1/health/db`, and `POST /api/v1/auth/register`. All other endpoints are planned.
 
 `/health` and `/api/v1/health` are liveness checks. `/api/v1/health/db` executes `SELECT 1` and returns 200 when the database is reachable or 503 with `{"status":"unavailable","database":"unavailable"}` when it is not. No SQL or credentials are returned.
 

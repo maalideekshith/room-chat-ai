@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 from alembic.config import Config
 from alembic.script import ScriptDirectory
@@ -14,9 +14,7 @@ def test_alembic_has_single_head() -> None:
 def test_initial_migration_is_root() -> None:
     config = Config("alembic.ini")
     script = ScriptDirectory.from_config(config)
-    head = script.get_current_head()
-    assert head is not None
-    revision = script.get_revision(head)
+    revision = script.get_revision("20261118_0001")
     assert revision is not None
     assert revision.down_revision is None
 

@@ -39,11 +39,30 @@ Testing:
 - `alembic check`: No new upgrade operations detected.
 - Future write tests should add transaction rollback fixtures for per-test cleanup.
 
+### Day 3
+
+User identity and registration:
+- `users` model with immutable UUID, canonical lowercase unique username/email, Argon2id password hash, active status, verification/login timestamps and audit timestamps.
+- Database checks enforce lowercase values and 3-30 character usernames.
+- Argon2id configuration: `time_cost=3`, `memory_cost=65536` KiB, `parallelism=4`, `hash_len=32`, `salt_len=16`.
+- Registration endpoint `POST /api/v1/auth/register` with 201, 409 and 422 handling.
+- Duplicate registration protection through database unique constraints and `IntegrityError` handling.
+- Password and hash excluded from API responses and model representation.
+- Alembic revision `20261119_0002_create_users.py` applied to main and test databases.
+- Transaction-rollback fixture added so database write tests leave no persisted rows.
+
+Day 3 verification:
+- Backend tests: 53 passed, 1 non-blocking deprecation warning.
+- Test database users table count after the suite: 0.
+- `alembic current`: `20261119_0002 (head)`.
+- `alembic check`: No new upgrade operations detected.
+- True concurrent registration is not exercised by automated tests; database unique constraints and `IntegrityError` handling cover the race condition.
+
 ### Verification Snapshot
 
 - PostgreSQL 18.7 via Docker; pgvector 0.8.7.
-- Main and test databases at revision `20261118_0001`.
-- Backend: 18 passed with test database configured; 11 passed, 7 skipped without it.
+- Main and test databases at revision `20261119_0002`.
+- Backend: 53 passed with test database configured.
 - Frontend production build: passed separately.
 
 ### Architecture decisions (documentation only)
@@ -61,8 +80,8 @@ Testing:
 
 ## Not Implemented
 
-- Authentication and sessions.
-- Business database models and tables.
+- JWT authentication sessions, login, refresh tokens and password reset.
+- Business database models and tables beyond users.
 - Solo workspace features.
 - Team rooms, memberships, invitations, roles.
 - Notifications and email delivery.
@@ -78,14 +97,14 @@ Testing:
 
 - Keep the Docker PostgreSQL container running for database integration tests.
 - Set `DATABASE_URL` and `TEST_DATABASE_URL` in `backend/.env` for local development and testing.
-- No Day 2 migration work remains; revision `20261118_0001` is applied to both databases.
+- No Day 3 migration work remains; revision `20261119_0002` is applied to both databases.
 
 ## Next
 
-### Day 3
+### Day 4
 
-- User identity and Argon2 password hashing.
-- JWT access tokens and refresh session records.
+- JWT access tokens.
+- Refresh sessions, rotation and revocation.
 
 ## Notes
 

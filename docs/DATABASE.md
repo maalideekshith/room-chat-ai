@@ -2,7 +2,7 @@
 
 ## Status
 
-Day 2 adds the database foundation: async SQLAlchemy 2 engine, session dependency, declarative Base, model registration package, Alembic, and a pgvector extension migration. No business models, authentication, or AI tables exist yet. The entity sections below are the approved target schema direction.
+Day 2 added the database foundation. Day 3 adds the users table and registration support. No workspaces, rooms, conversations, AI, or refresh-session tables exist yet. Entities below the implemented sections remain target schema direction.
 
 ## Day 2 Foundation
 
@@ -19,6 +19,24 @@ Not implemented:
 - Any business model or table.
 - Authentication tables.
 - Embedding tables or RAG.
+
+## Day 3 User Foundation
+
+Implemented in migration `20261119_0002`:
+- `users` table with immutable UUID primary key.
+- Canonical lowercase unique `username` and unique `email`.
+- Argon2id `password_hash`.
+- `is_active`, `email_verified_at`, `last_login_at`, `created_at`, `updated_at`.
+- Lowercase, username-length, and NOT NULL database constraints.
+- Registration endpoint `POST /api/v1/auth/register`.
+
+Password hashing configuration:
+- Argon2id via `argon2-cffi`.
+- `time_cost=3`, `memory_cost=65536` KiB, `parallelism=4`, `hash_len=32`, `salt_len=16`.
+
+Test isolation:
+- Database write tests use an outer transaction bound to `TEST_DATABASE_URL` and roll back after each test.
+- The development database remains protected by the existing test guard.
 
 ## Environment
 
