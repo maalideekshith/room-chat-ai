@@ -112,9 +112,35 @@ Day 3 verification:
 
 ## Next
 
-### Day 5
+### Day 6
 
-- Password reset and email verification flows.
+- Continue with product workspace capabilities and backend-supported account flows.
+
+### Day 5 — Frontend authentication and design foundation
+
+- Added responsive `/login`, `/register` and protected `/app` routes with reusable visual tokens, branded form components, responsive navigation and an initial workspace dashboard.
+- Registration and login use the existing backend contracts. Registration does not imply login; the API has no full-name field, so the UI does not collect one.
+- Added a centralized typed API client and authentication provider with `initializing`, `authenticated` and `unauthenticated` states. Protected routes wait for session restoration, and public auth routes redirect signed-in users to `/app`.
+- Access JWTs remain in module memory only. The opaque refresh token remains in the backend-set HttpOnly cookie. The CSRF value is retained for refresh/logout calls; no access or refresh token is stored in browser storage. Requests use `credentials: include`.
+- Startup restoration and protected-request 401 handling use refresh rotation. Refresh attempts are single-flight in a tab and use the browser Web Locks API across tabs when available. Refresh/login calls are not automatically retried.
+- Logout and logout-all are integrated with CSRF headers and local state is cleared even when logout requests fail. Unsupported workspace destinations are shown as unavailable rather than presented as working features.
+- Added a quiet health indicator using the existing `/api/v1/health` endpoint and configured API base URL. `frontend/.env.example` documents `VITE_API_BASE_URL` and contains no secrets.
+- Added frontend tests for validation, registration, login, safe API errors, protected routing, restoration, refresh/CSRF behavior, refresh failure, refresh deduplication and logout paths.
+- No backend authentication behavior was changed. Tests use controlled fetch responses; live browser/backend integration was not run.
+
+Day 5 verification:
+
+- `cd frontend && npm.cmd test -- --reporter=dot`: 2 test files passed, 18 tests passed.
+- `cd frontend && npm.cmd run lint`: passed with no reported lint diagnostics.
+- `cd frontend && npm.cmd run build`: passed TypeScript project checks and Vite production build (36 modules transformed).
+- Manual verification against a running backend and visual checks at desktop, tablet and mobile widths remain necessary.
+
+Known limitations:
+
+- The application has no `/me` endpoint, so restored identity details cannot be populated; dashboard copy avoids inventing them.
+- `navigator.locks` is unavailable in some browsers; in those browsers refresh single-flight is limited to the current tab.
+- Login and refresh rate limiting must be configured at the production deployment edge/shared limiter; no reliable shared limiter is implemented in this frontend.
+- Password recovery, email verification and actual chat/team workspace resources are not implemented.
 
 ## Notes
 
