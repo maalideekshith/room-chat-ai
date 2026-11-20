@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
+from app.api.solo import router as solo_router
 from app.core.config import settings
 from app.db.session import dispose_engine
 
@@ -26,12 +27,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
 )
 
 app.include_router(health_router)
 app.include_router(auth_router)
+app.include_router(solo_router)
 
 
 @app.exception_handler(Exception)

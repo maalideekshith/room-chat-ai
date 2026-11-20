@@ -34,10 +34,10 @@ async def test_users_table_columns(test_session_factory) -> None:
 
 
 @pytest.mark.asyncio
-async def test_database_is_at_users_migration(test_session_factory) -> None:
+async def test_database_is_at_day_6_migration_head(test_session_factory) -> None:
     async with test_session_factory() as session:
         result = await session.execute(text("SELECT version_num FROM alembic_version"))
-    assert result.scalar_one() == "20261120_0003"
+    assert result.scalar_one() == "20261121_0004"
 
 
 @pytest.mark.asyncio

@@ -9,7 +9,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
           <path d="M14 13h12M14 18h8" />
         </svg>
       </span>
-      <span className="brand__wordmark">Room<span>Chat</span><i>AI</i></span>
+      <span className="brand__wordmark">Room Chat AI</span>
     </Link>
   )
 }

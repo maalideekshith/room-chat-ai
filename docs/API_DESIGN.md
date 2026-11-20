@@ -110,6 +110,19 @@ Rules:
 - `POST /notifications/{id}/read`
 - `POST /notifications/read-all`
 
+## Solo API (implemented Day 6)
+
+- `GET /solo/workspace`
+- `GET /solo/providers`
+- `GET|POST /solo/conversations`; `GET|PATCH|DELETE /solo/conversations/{id}`
+- `GET|POST /solo/conversations/{id}/messages`
+- `PUT /solo/conversations/{id}/ai-settings`
+- `GET|POST /solo/credentials`; `GET /solo/credentials/{id}/models`; `PATCH|DELETE /solo/credentials/{id}`
+- `GET|PUT /solo/preferences`
+- `GET|POST /solo/sources`; `POST /solo/sources/files`; `POST /solo/sources/urls`; `DELETE /solo/sources/{id}`
+
+All Solo endpoints require a valid access token and enforce user ownership. Credential write requests accept secrets but responses return metadata only. File and URL source endpoints process synchronously and report the persisted source status.
+
 ## Authorization Rules
 
 - Personal workspace routes require ownership.

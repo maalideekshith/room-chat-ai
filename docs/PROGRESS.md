@@ -92,17 +92,11 @@ Day 3 verification:
 ## Not Implemented
 
 - Password reset and email verification flows.
-- Business database models and tables beyond users and refresh sessions.
-- Solo workspace features.
 - Team rooms, memberships, invitations, roles.
 - Notifications and email delivery.
 - Direct chat and WebSockets.
-- File uploads and ingestion.
-- AI providers, BYOK, encryption and RAG.
-- Reports.
-- MCP, Redis, Celery.
-- Billing and subscriptions.
-- Docker deployment.
+- Reports, MCP, Redis, Celery, billing and subscriptions.
+- S3-compatible object storage and production deployment configuration.
 
 ## Manual Setup Required
 
@@ -112,9 +106,34 @@ Day 3 verification:
 
 ## Next
 
-### Day 6
+### Day 6 — Solo workspace
 
-- Continue with product workspace capabilities and backend-supported account flows.
+- Added a user-owned Solo workspace provisioned in the registration transaction and backfilled existing users by Alembic revision `20261121_0004`.
+- Added conversation CRUD, scoped message history, per-conversation provider/model selection, user defaults and AI request handling. A user message is committed before provider work so provider failures do not discard the question.
+- Added OpenAI, Anthropic and Gemini HTTP adapters behind provider-neutral chat/embedding protocols. Provider model choices are loaded from the user's own validated credential. Provider keys use AES-GCM envelope encryption and are never returned by credential schemas; the 32-byte master key is configured outside the repository.
+- Added PDF, UTF-8 text and Markdown upload ingestion plus URL ingestion, size/type checks, DNS public-address checks, content extraction, overlapping chunks and pgvector embeddings. Sources record `processing`, `ready` or `failed`; ingestion errors do not appear as ready. A private local filesystem adapter implements the storage boundary.
+- Added responsive Solo dashboard interactions for conversation history/search, message composition, provider credentials/defaults, model selection, file/URL sources, deletion, loading/error feedback and mobile sidebar behavior.
+- Added focused backend service/security/provider and frontend workflow tests. Database-backed backend tests require `TEST_DATABASE_URL` and will be reported separately when unavailable.
+- Production deployment must provide a managed/shared rate limiter for login, refresh, uploads and AI calls; this implementation does not add an in-process limiter.
+
+Day 6 verification:
+
+- Backend: `cd backend && .\.venv\Scripts\python.exe -m pytest -q` — 43 passed, 58 skipped, 2 warnings. Database integration tests were skipped because `TEST_DATABASE_URL` is unset.
+- Migration: `cd backend && .\.venv\Scripts\alembic.exe upgrade head --sql` — passed and rendered revisions through `20261121_0004`; it was not applied to a database.
+- `alembic check` — unable to run because the configured local PostgreSQL credentials fail with `password authentication failed for user "DELL"`.
+- Backend dependency check: `.\.venv\Scripts\python.exe -m pip check` — no broken requirements.
+- Frontend: `cd frontend && npm.cmd test -- --reporter=dot` — 3 test files and 23 tests passed; `npm.cmd run lint` passed; `npm.cmd run build` passed TypeScript project checks and Vite production build (37 modules transformed).
+- Repository: `git diff --check` passed (Git emitted only LF-to-CRLF working-copy notices).
+- No live provider calls or browser-based desktop/mobile visual verification were run.
+
+Known limitations:
+
+- The new migration has only been rendered as offline SQL so far; it has not been applied to a development or test database in this environment.
+- Knowledge ingestion runs synchronously in the request and local filesystem storage is for development. Production needs S3-compatible storage, a durable job queue, retry/cleanup policies and operational limits.
+- URL ingestion rejects non-public resolved addresses and redirects, but DNS is resolved once for validation and again by the HTTP client. Production should use a network egress proxy or an HTTP transport that pins validated addresses to close DNS-rebinding/TOCTOU exposure.
+- Embedding is currently supported through the user's OpenAI or Gemini credential with a fixed 768-dimensional versioned vector. Scanned PDFs/OCR and model migration/re-embedding jobs are not implemented.
+- No live provider credentials were available, so external provider calls were verified with adapter tests, not real accounts.
+- No browser automation was available for visual review; responsive styles and workflow tests were inspected, but desktop/mobile rendering still needs manual review.
 
 ### Day 5 — Frontend authentication and design foundation
 

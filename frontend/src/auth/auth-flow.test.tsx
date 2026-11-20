@@ -6,7 +6,6 @@ import { clearLocalSession } from "../api/auth"
 import { AppRoutes } from "../App"
 import { AuthProvider } from "./AuthProvider"
 
-const API_URL = "http://localhost:8000"
 const csrfKey = "room-chat.csrf"
 
 function response(status: number, body?: unknown): Response {
@@ -70,18 +69,20 @@ describe("registration", () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/auth/register"))).toBe(false)
   })
 
-  it("creates an account using the actual registration contract, then asks the user to sign in", async () => {
+  it("creates an account, signs in through the existing API, and lands on Overview", async () => {
     const user = userEvent.setup()
     const fetchMock = mockFetch((url) => {
       if (url.endsWith("/api/v1/health")) return response(200, { status: "ok" })
-      expect(url).toBe(`${API_URL}/api/v1/auth/register`)
-      return response(201, {
-        id: "2a49edbf-1474-4085-89da-77def2f51b74",
-        username: "alex_user",
-        email: "alex@example.com",
-        is_active: true,
-        created_at: "2026-11-20T12:00:00Z",
-      })
+      if (url.endsWith("/api/v1/auth/register")) return response(201, {
+          id: "2a49edbf-1474-4085-89da-77def2f51b74",
+          username: "alex_user",
+          email: "alex@example.com",
+          is_active: true,
+          created_at: "2026-11-20T12:00:00Z",
+        })
+      if (url.endsWith("/api/v1/auth/login")) return response(200, tokens("new-account-access", "new-account-csrf"))
+      if (url.endsWith("/api/v1/solo/conversations")) return response(200, [])
+      return response(404, {})
     })
     renderAt("/register")
 
@@ -91,8 +92,7 @@ describe("registration", () => {
     await user.type(screen.getByLabelText("Confirm password"), "correct horse battery")
     await user.click(screen.getByRole("button", { name: /create account/i }))
 
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeInTheDocument()
-    expect(screen.getByText("Your account is ready. Sign in to continue.")).toBeInTheDocument()
+    expect(await screen.findByRole("heading", { name: "Welcome to Room Chat AI" })).toBeInTheDocument()
     const registerIndex = fetchMock.mock.calls.findIndex(([url]) => String(url).endsWith("/auth/register"))
     const init = fetchMock.mock.calls[registerIndex]?.[1]
     expect(init?.credentials).toBe("include")
@@ -101,7 +101,13 @@ describe("registration", () => {
       email: "alex@example.com",
       password: "correct horse battery",
     })
-    expect(window.localStorage.getItem(csrfKey)).toBeNull()
+    const loginIndex = fetchMock.mock.calls.findIndex(([url]) => String(url).endsWith("/auth/login"))
+    const loginInit = requestInitAt(fetchMock, loginIndex)
+    expect(JSON.parse(String(loginInit.body))).toEqual({
+      username_or_email: "alex_user",
+      password: "correct horse battery",
+    })
+    expect(window.localStorage.getItem(csrfKey)).toBe("new-account-csrf")
   })
 
   it("shows a safe duplicate username/email error", async () => {
@@ -125,8 +131,9 @@ describe("login and routing", () => {
     const user = userEvent.setup()
     const fetchMock = mockFetch((url) => {
       if (url.endsWith("/api/v1/health")) return response(200, { status: "ok" })
-      expect(url).toBe(`${API_URL}/api/v1/auth/login`)
-      return response(200, tokens("access-secret", "csrf-from-login"))
+      if (url.endsWith("/api/v1/auth/login")) return response(200, tokens("access-secret", "csrf-from-login"))
+      if (url.endsWith("/api/v1/solo/conversations")) return response(200, [])
+      return response(404, {})
     })
     renderAt("/login")
 
@@ -134,7 +141,7 @@ describe("login and routing", () => {
     await user.type(screen.getByLabelText("Password"), "short-legacy-password")
     await user.click(screen.getByRole("button", { name: /sign in/i }))
 
-    expect(await screen.findByRole("heading", { name: /Make room for/ })).toBeInTheDocument()
+    expect(await screen.findByRole("heading", { name: "Welcome to Room Chat AI" })).toBeInTheDocument()
     const loginIndex = fetchMock.mock.calls.findIndex(([url]) => String(url).endsWith("/auth/login"))
     const loginInit = requestInitAt(fetchMock, loginIndex)
     expect(JSON.parse(String(loginInit.body))).toEqual({
@@ -167,7 +174,7 @@ describe("login and routing", () => {
     renderAt("/app")
 
     expect(screen.getByRole("status")).toHaveTextContent("Restoring your secure session")
-    expect(screen.queryByRole("heading", { name: /Make room for/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: "Welcome to Room Chat AI" })).not.toBeInTheDocument()
     finishRefresh(response(401, { detail: "expired" }))
     expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeInTheDocument()
   })
@@ -175,12 +182,13 @@ describe("login and routing", () => {
   it("restores a session through refresh and keeps the access token out of storage", async () => {
     window.localStorage.setItem(csrfKey, "csrf-before-reload")
     const fetchMock = mockFetch((url) => {
-      expect(url).toBe(`${API_URL}/api/v1/auth/refresh`)
-      return response(200, tokens("restored-access", "csrf-after-refresh"))
+      if (url.endsWith("/api/v1/auth/refresh")) return response(200, tokens("restored-access", "csrf-after-refresh"))
+      if (url.endsWith("/api/v1/solo/conversations")) return response(200, [])
+      return response(404, {})
     })
     renderAt("/app")
 
-    expect(await screen.findByRole("heading", { name: /Make room for/ })).toBeInTheDocument()
+    expect(await screen.findByRole("heading", { name: "Welcome to Room Chat AI" })).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const refreshInit = requestInitAt(fetchMock, 0)
     expect(refreshInit.method).toBe("POST")
@@ -194,7 +202,7 @@ describe("login and routing", () => {
     mockFetch(() => response(500, {}))
     renderAt("/app")
     expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeInTheDocument()
-    expect(screen.queryByRole("heading", { name: /Make room for/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: "Welcome to Room Chat AI" })).not.toBeInTheDocument()
   })
 })
 
@@ -203,7 +211,7 @@ describe("refresh and logout", () => {
     await user.type(screen.getByLabelText("Username or email"), "alex_user")
     await user.type(screen.getByLabelText("Password"), "valid-password")
     await user.click(screen.getByRole("button", { name: /sign in/i }))
-    await screen.findByRole("heading", { name: /Make room for/ })
+    await screen.findByRole("heading", { name: "Welcome to Room Chat AI" })
     await user.click(screen.getByRole("button", { name: /my account/i }))
   }
 
@@ -295,7 +303,7 @@ describe("refresh and logout", () => {
       return response(404, {})
     })
     renderAt("/app")
-    await screen.findByRole("heading", { name: /Make room for/ })
+    await screen.findByRole("heading", { name: "Welcome to Room Chat AI" })
     await user.click(screen.getByRole("button", { name: /my account/i }))
     await user.click(screen.getByRole("menuitem", { name: /sign out all sessions/i }))
 
@@ -323,7 +331,7 @@ describe("refresh and logout", () => {
     })
     const { authenticatedRequest } = await import("../api/auth")
     renderAt("/app")
-    await screen.findByRole("heading", { name: /Make room for/ })
+    await screen.findByRole("heading", { name: "Welcome to Room Chat AI" })
 
     await Promise.all([
       authenticatedRequest<void>("/api/v1/auth/logout-all", { method: "POST" }),

@@ -96,3 +96,11 @@ Planned flow:
 - Which OCR provider is used in production.
 - Whether room AI may use a member's credential or must use a room-owned credential.
 - Whether users may choose embedding models independently of chat models.
+
+## Day 6 Solo implementation
+
+- OpenAI, Anthropic and Gemini chat adapters implement the shared provider protocol; OpenAI and Gemini currently implement the 768-dimensional embedding protocol.
+- Provider keys are validated against the provider model endpoint before storage and encrypted with AES-GCM envelope encryption. Set `AI_CREDENTIAL_MASTER_KEY` to base64 for exactly 32 random bytes in the deployment secret manager; do not reuse the JWT secret. Generate a development value with `python -c "import base64,secrets; print(base64.b64encode(secrets.token_bytes(32)).decode())"`.
+- PDF, TXT and Markdown files and public HTTP(S) URLs are ingested synchronously. Extraction errors and provider failures persist a failed source state; chunk rows are inserted only after embedding succeeds.
+- Retrieval filters on both source and chunk owner and uses cosine nearest-neighbor ranking. Source text is treated as untrusted prompt context.
+- Local files are stored outside the web root behind the `FileStorage` adapter. Production must replace this with private object storage and move ingestion to a durable queue.

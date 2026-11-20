@@ -309,3 +309,12 @@ Optional per-conversation AI settings snapshot:
 - Exact soft-delete window for user content.
 - Whether extraction jobs need a separate queue table once Celery is added.
 - Audit retention duration and legal hold policy.
+
+## Solo schema (Alembic `20261121_0004`)
+
+- `solo_workspaces`: one row per user, backfilled for existing accounts.
+- `ai_credentials` and `user_ai_preferences`: owner-scoped encrypted provider keys and defaults.
+- `solo_conversations` and `solo_messages`: owner-scoped history with composite foreign keys.
+- `solo_sources` and `document_chunks`: owner-scoped source state, extracted chunks and `vector(768)` embeddings, with a cosine HNSW index.
+
+The Solo migration follows refresh-session revision `20261120_0003`. Apply migrations to both development and isolated test databases before database-backed Solo tests or API use.

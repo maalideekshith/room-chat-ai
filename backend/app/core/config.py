@@ -1,4 +1,5 @@
 import secrets
+import base64
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -36,6 +37,11 @@ class Settings(BaseSettings):
     auth_cookie_secure: bool = False
     auth_cookie_samesite: str = "lax"
 
+    ai_credential_master_key: str | None = None
+    solo_storage_path: str = ".data/solo"
+    solo_max_upload_bytes: int = Field(default=10_485_760, ge=1024, le=52_428_800)
+    ai_provider_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
+
     @field_validator("database_url")
     @classmethod
     def validate_database_url(cls, value: str) -> str:
@@ -65,6 +71,19 @@ class Settings(BaseSettings):
             raise ValueError("AUTH_COOKIE_SAMESITE must be lax, strict, or none")
         return normalized
 
+    @field_validator("ai_credential_master_key")
+    @classmethod
+    def validate_ai_master_key(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        try:
+            key = base64.b64decode(value, validate=True)
+        except (ValueError, TypeError):
+            raise ValueError("AI_CREDENTIAL_MASTER_KEY must be base64 encoded") from None
+        if len(key) != 32:
+            raise ValueError("AI_CREDENTIAL_MASTER_KEY must encode exactly 32 bytes")
+        return value
+
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
         development = self.environment.lower() in {"development", "dev", "test"}
@@ -80,6 +99,8 @@ class Settings(BaseSettings):
                 raise ValueError("Production requires a non-development JWT secret of at least 32 bytes")
             if not self.auth_cookie_secure:
                 raise ValueError("AUTH_COOKIE_SECURE must be enabled outside development")
+            if not self.ai_credential_master_key:
+                raise ValueError("AI_CREDENTIAL_MASTER_KEY is required outside development")
         if self.auth_cookie_samesite == "none" and not self.auth_cookie_secure:
             raise ValueError("SameSite=None cookies require AUTH_COOKIE_SECURE=true")
         if self.refresh_cookie_name == self.csrf_cookie_name:

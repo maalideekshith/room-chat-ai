@@ -30,11 +30,26 @@ async def test_cors_preflight_allows_configured_auth_request() -> None:
 
 
 @pytest.mark.asyncio
+async def test_cors_preflight_allows_solo_resource_methods() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.options(
+            "/api/v1/solo/conversations/example",
+            headers={
+                "Origin": settings.cors_origins[0],
+                "Access-Control-Request-Method": "PATCH",
+                "Access-Control-Request-Headers": "authorization,content-type,x-csrf-token",
+            },
+        )
+    assert response.status_code == 200
+    assert "PATCH" in response.headers["access-control-allow-methods"]
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("origin", "method", "requested_headers"),
     [
         ("https://untrusted.example", "POST", "x-csrf-token"),
-        (None, "PATCH", "x-csrf-token"),
+        (None, "TRACE", "x-csrf-token"),
         (None, "POST", "x-unapproved-header"),
     ],
 )

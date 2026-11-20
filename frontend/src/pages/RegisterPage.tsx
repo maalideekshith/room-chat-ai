@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { ApiError, register } from "../api/auth"
+import { useAuth } from "../auth/AuthContext"
 import { AuthLayout } from "../components/AuthLayout"
 import { PasswordField } from "../components/PasswordField"
 import { normalizeUsername, validateRegistration, type RegistrationErrors, type RegistrationValues } from "./validation"
@@ -13,6 +14,7 @@ const initialValues: RegistrationValues = {
 }
 
 export default function RegisterPage() {
+  const { signIn } = useAuth()
   const navigate = useNavigate()
   const [values, setValues] = useState(initialValues)
   const [errors, setErrors] = useState<RegistrationErrors>({})
@@ -38,15 +40,22 @@ export default function RegisterPage() {
 
     setSubmitting(true)
     try {
+      const username = normalizeUsername(values.username)
       await register({
-        username: normalizeUsername(values.username),
+        username,
         email: values.email.trim().toLowerCase(),
         password: values.password,
       })
-      navigate("/login", {
-        replace: true,
-        state: { notice: "Your account is ready. Sign in to continue." },
-      })
+      try {
+        // Registration creates the account but does not create a session; use the existing login flow.
+        await signIn({ username_or_email: username, password: values.password })
+        navigate("/app", { replace: true })
+      } catch {
+        navigate("/login", {
+          replace: true,
+          state: { notice: "Your account is ready. Sign in to continue." },
+        })
+      }
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
         setFormError("That username or email is already registered. Try signing in or use different details.")

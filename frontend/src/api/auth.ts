@@ -97,10 +97,17 @@ function notifySessionExpired(): void {
   window.dispatchEvent(new CustomEvent("roomchat:auth-expired"))
 }
 
-function userMessage(status: number): string {
+function userMessage(status: number, path = ""): string {
+  if (path.endsWith("/auth/login") && status === 401) return "That username or password didn’t match an active account."
+  if (path.endsWith("/auth/register") && status === 409) return "That username or email is already registered. Try signing in or choose another."
   if (status === 401) return "Your session is no longer valid. Please sign in again."
   if (status === 403) return "This request could not be verified. Refresh the page and try again."
-  if (status === 409) return "That username or email is already registered. Try signing in or choose another."
+  if (path.includes("/solo/") && status === 409) return "Connect a provider and choose a model before sending a message."
+  if (path.includes("/solo/") && status === 413) return "This source is larger than the allowed upload size."
+  if (path.includes("/solo/") && status === 429) return "The AI provider is rate limiting requests. Try again shortly."
+  if (path.includes("/solo/") && status === 504) return "The AI provider did not respond in time. Try again."
+  if (path.includes("/solo/") && status === 422) return "Check the selected provider, model, file type, or URL and try again."
+  if (status === 409) return "This item conflicts with an existing setting. Review it and try again."
   if (status === 422) return "Please check the information and try again."
   if (status >= 500) return "Room Chat AI is having trouble right now. Please try again shortly."
   return "We couldn’t complete that request. Please try again."
@@ -108,7 +115,11 @@ function userMessage(status: number): string {
 
 async function send(path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers)
-  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json")
+  if (
+    init.body
+    && !(typeof FormData !== "undefined" && init.body instanceof FormData)
+    && !headers.has("Content-Type")
+  ) headers.set("Content-Type", "application/json")
   try {
     return await fetch(`${apiBaseUrl}${path}`, {
       ...init,
@@ -123,7 +134,7 @@ async function send(path: string, init: RequestInit = {}): Promise<Response> {
 
 async function jsonRequest<T>(path: string, init: RequestInit): Promise<T> {
   const response = await send(path, init)
-  if (!response.ok) throw new ApiError(response.status, userMessage(response.status))
+  if (!response.ok) throw new ApiError(response.status, userMessage(response.status, path))
   return (await response.json()) as T
 }
 
@@ -183,7 +194,7 @@ export async function login(payload: LoginPayload): Promise<void> {
 export async function authenticatedRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const sendWithAccessToken = async (): Promise<Response> => {
     const token = accessToken
-    if (!token) throw new ApiError(401, userMessage(401))
+    if (!token) throw new ApiError(401, userMessage(401, path))
     const headers = new Headers(init.headers)
     headers.set("Authorization", `Bearer ${token}`)
     const method = (init.method || "GET").toUpperCase()
@@ -197,28 +208,28 @@ export async function authenticatedRequest<T>(path: string, init: RequestInit = 
   let response = await sendWithAccessToken()
   if (response.status === 401) {
     const refreshed = await refreshOnce()
-    if (!refreshed) throw new ApiError(401, userMessage(401))
+    if (!refreshed) throw new ApiError(401, userMessage(401, path))
     response = await sendWithAccessToken()
     if (response.status === 401) notifySessionExpired()
   }
-  if (!response.ok) throw new ApiError(response.status, userMessage(response.status))
+  if (!response.ok) throw new ApiError(response.status, userMessage(response.status, path))
   if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
 
 export async function logout(): Promise<void> {
   const csrf = readStoredCsrf()
-  if (!csrf) throw new ApiError(403, userMessage(403))
+  if (!csrf) throw new ApiError(403, userMessage(403, "/api/v1/auth/logout"))
   const response = await send("/api/v1/auth/logout", {
     method: "POST",
     headers: { [csrfHeaderName]: csrf },
   })
-  if (!response.ok) throw new ApiError(response.status, userMessage(response.status))
+  if (!response.ok) throw new ApiError(response.status, userMessage(response.status, "/api/v1/auth/logout"))
 }
 
 export async function logoutAll(): Promise<void> {
   const csrf = readStoredCsrf()
-  if (!csrf) throw new ApiError(403, userMessage(403))
+  if (!csrf) throw new ApiError(403, userMessage(403, "/api/v1/auth/logout-all"))
   await authenticatedRequest<void>("/api/v1/auth/logout-all", {
     method: "POST",
     headers: { [csrfHeaderName]: csrf },

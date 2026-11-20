@@ -1,3 +1,5 @@
+from uuid import UUID
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
@@ -5,6 +7,7 @@ from sqlalchemy import select
 from app.core.security import verify_password
 from app.main import app
 from app.models.user import User
+from app.models.solo import SoloWorkspace
 
 VALID_PASSWORD = "correct horse battery staple"
 
@@ -34,6 +37,10 @@ async def test_valid_registration_returns_201(test_app_db_session) -> None:
     assert body["username"] == "alice_dev"
     assert body["email"] == "alice@example.com"
     assert body["is_active"] is True
+    workspace = await test_app_db_session.scalar(
+        select(SoloWorkspace).where(SoloWorkspace.owner_user_id == UUID(body["id"]))
+    )
+    assert workspace is not None
 
 
 @pytest.mark.asyncio

@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.refresh_session import RefreshSession
 from app.models.user import User
+from app.models.solo import SoloWorkspace
 from app.schemas.auth import LoginRequest, RegisterRequest
 
 
@@ -155,6 +156,8 @@ async def register_user(session: AsyncSession, payload: RegisterRequest) -> User
     session.add(user)
 
     try:
+        await session.flush()
+        session.add(SoloWorkspace(owner_user_id=user.id))
         await session.commit()
     except IntegrityError:
         await session.rollback()

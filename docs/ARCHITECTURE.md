@@ -170,6 +170,14 @@ Decided:
 - Celery: ingestion, embeddings, reports, email.
 - MCP: controlled tool access with explicit authorization.
 
+## Implemented Solo boundary
+
+- `/api/v1/solo` endpoints use the shared authenticated-user dependency and scope database reads/writes by `user_id`.
+- A user has one `solo_workspaces` row. Conversations, messages, sources and vector chunks carry owner scope, reinforced by composite foreign keys.
+- AI provider adapters are server-side and provider independent. Each user credential is envelope-encrypted with a deployment-provided master key.
+- Source storage uses a `FileStorage` protocol with a private local implementation. Production object storage can implement the same boundary.
+- Source extraction, embedding and retrieval currently run synchronously; queueing, retries and production storage are deployment follow-ups.
+
 ## Non-Goals
 
 - Microservices.
