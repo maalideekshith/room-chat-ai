@@ -12,6 +12,7 @@ dependencies = [
   "pgvector",
   "argon2-cffi",
   "email-validator",
+  "PyJWT>=2.10,<3",
 ]
 
 [tool.pytest.ini_options]

@@ -58,10 +58,21 @@ Day 3 verification:
 - `alembic check`: No new upgrade operations detected.
 - True concurrent registration is not exercised by automated tests; database unique constraints and `IntegrityError` handling cover the race condition.
 
+### Day 4
+
+- Added username/email login with generic failures, inactive-account rejection, Argon2 verification in a worker thread, and `last_login_at` update.
+- Added HS256 JWT access tokens with issuer, audience, expiry, issued-at, UUID subject and unique JWT ID validation.
+- Added rotating refresh sessions with hashed opaque tokens, row locking, family replay revocation, logout and logout-all.
+- Added Secure-configurable HttpOnly refresh cookies and double-submit CSRF validation for refresh/logout operations.
+- Added reusable bearer current-user dependency and refresh-session migration `20261120_0003`.
+- The migration could not be applied in this environment because the configured local PostgreSQL login failed; database-backed tests remain unverified here.
+- Verification in this environment: 22 passed, 49 skipped, 2 warnings. Skips are PostgreSQL-backed tests because `TEST_DATABASE_URL` is unset.
+- Offline SQL rendering for `20261120_0003` succeeded. The live migration remains unapplied here.
+
 ### Verification Snapshot
 
-- PostgreSQL 18.7 via Docker; pgvector 0.8.7.
-- Main and test databases at revision `20261119_0002`.
+- PostgreSQL 18.7 via Docker; pgvector 0.8.7 in the prior Day 3 verification environment.
+- Prior main and test database snapshot at revision `20261119_0002`; Day 4 revision `20261120_0003` is not confirmed applied.
 - Backend: 53 passed with test database configured.
 - Frontend production build: passed separately.
 
@@ -80,8 +91,8 @@ Day 3 verification:
 
 ## Not Implemented
 
-- JWT authentication sessions, login, refresh tokens and password reset.
-- Business database models and tables beyond users.
+- Password reset and email verification flows.
+- Business database models and tables beyond users and refresh sessions.
 - Solo workspace features.
 - Team rooms, memberships, invitations, roles.
 - Notifications and email delivery.
@@ -97,14 +108,13 @@ Day 3 verification:
 
 - Keep the Docker PostgreSQL container running for database integration tests.
 - Set `DATABASE_URL` and `TEST_DATABASE_URL` in `backend/.env` for local development and testing.
-- No Day 3 migration work remains; revision `20261119_0002` is applied to both databases.
+- Apply revision `20261120_0003` to development and test databases after correcting their local PostgreSQL credentials.
 
 ## Next
 
-### Day 4
+### Day 5
 
-- JWT access tokens.
-- Refresh sessions, rotation and revocation.
+- Password reset and email verification flows.
 
 ## Notes
 

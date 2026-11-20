@@ -21,3 +21,11 @@ def test_initial_migration_is_root() -> None:
 
 def test_migration_directory_exists() -> None:
     assert Path("alembic/versions").is_dir()
+
+
+def test_refresh_sessions_migration_follows_users() -> None:
+    config = Config("alembic.ini")
+    script = ScriptDirectory.from_config(config)
+    revision = script.get_revision("20261120_0003")
+    assert revision is not None
+    assert revision.down_revision == "20261119_0002"

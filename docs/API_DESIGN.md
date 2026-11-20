@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented: `GET /health`, `GET /api/v1/health`, database readiness `GET /api/v1/health/db`, and `POST /api/v1/auth/register`. All other endpoints are planned.
+Implemented: liveness and database readiness endpoints, registration, login, refresh, logout and logout-all. Resource APIs and `/me` remain planned.
 
 `/health` and `/api/v1/health` are liveness checks. `/api/v1/health/db` executes `SELECT 1` and returns 200 when the database is reachable or 503 with `{"status":"unavailable","database":"unavailable"}` when it is not. No SQL or credentials are returned.
 
@@ -30,6 +30,8 @@ Rules:
 - Access token lifetime: short (target 15 minutes).
 - Refresh rotation on every use; reuse revokes the token family.
 - Refresh cookie: Secure, HttpOnly, SameSite, narrow path.
+- Login and refresh return a CSRF token alongside the access token. Refresh and logout requests require that value to match the `csrf_token` cookie and `X-CSRF-Token` header.
+- Access-token JWT algorithm is fixed to HS256 by application configuration.
 
 ## Solo
 
@@ -121,7 +123,8 @@ Rules:
 ## Error and Security Rules
 
 - Stable error codes planned.
-- Rate limits on auth, invitations, uploads and AI calls.
+- Production must enforce login and refresh rate limits through a shared gateway or limiter before public exposure. No reliable shared limiter is implemented in the application yet.
+- Rate limits are also required for registration, invitations, uploads and AI calls.
 - No internal storage paths in responses.
 - Signed URLs or authenticated streaming for file access.
 - Request logs must redact credentials, cookies and tokens.

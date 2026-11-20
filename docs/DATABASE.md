@@ -2,7 +2,7 @@
 
 ## Status
 
-Day 2 added the database foundation. Day 3 adds the users table and registration support. No workspaces, rooms, conversations, AI, or refresh-session tables exist yet. Entities below the implemented sections remain target schema direction.
+Day 2 added the database foundation. Day 3 added users and registration. Day 4 adds refresh sessions and authentication endpoints. No workspaces, rooms, conversations, or AI tables exist yet. Entities below the implemented sections remain target schema direction.
 
 ## Day 2 Foundation
 
@@ -29,6 +29,12 @@ Implemented in migration `20261119_0002`:
 - `is_active`, `email_verified_at`, `last_login_at`, `created_at`, `updated_at`.
 - Lowercase, username-length, and NOT NULL database constraints.
 - Registration endpoint `POST /api/v1/auth/register`.
+
+## Day 4 Refresh Sessions
+
+Migration `20261120_0003` adds `refresh_sessions` with a UUID primary key, cascading user foreign key, unique SHA-256 token hash, family UUID, issue/expiry timestamps, rotation/revocation timestamps and self-referencing replacement-session foreign key. User, family and expiry indexes support revocation and cleanup queries. Raw refresh tokens are not stored.
+
+The migration is part of the repository but must be applied with `alembic upgrade head` in each environment.
 
 Password hashing configuration:
 - Argon2id via `argon2-cffi`.

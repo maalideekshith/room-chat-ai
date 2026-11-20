@@ -68,6 +68,37 @@ class RegisterRequest(BaseModel):
         return value
 
 
+class LoginRequest(BaseModel):
+    username_or_email: str
+    password: SecretStr
+
+    @field_validator("username_or_email", mode="before")
+    @classmethod
+    def normalize_identifier(cls, value: object) -> object:
+        return value.strip().lower() if isinstance(value, str) else value
+
+    @field_validator("username_or_email")
+    @classmethod
+    def validate_identifier(cls, value: str) -> str:
+        if not value or len(value) > 320:
+            raise ValueError("Invalid username or email")
+        return value
+
+    @field_validator("password")
+    @classmethod
+    def limit_login_password_size(cls, value: SecretStr) -> SecretStr:
+        if len(value.get_secret_value()) > PASSWORD_MAX_LENGTH:
+            raise ValueError("Password is too long")
+        return value
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    csrf_token: str
+    token_type: str = "bearer"
+    expires_in: int
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

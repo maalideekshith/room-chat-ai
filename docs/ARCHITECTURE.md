@@ -71,7 +71,7 @@ Decided:
 Constraints:
 - No refresh token in response bodies.
 - Password reset and email verification are separate future flows.
-- Rate-limit login, refresh and registration endpoints.
+- Production must rate-limit login, refresh and registration through a shared gateway or limiter; no reliable shared limiter is implemented in the application yet.
 
 ## Tenancy Model
 
